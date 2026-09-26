@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Private Chat - File Sharing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #1e293b; user-select: none; padding: 12px; }
+
+        .auth-container { position: fixed; top: 14px; right: 14px; z-index: 1000; display: flex; align-items: center; gap: 6px; }
+        .btn-auth { background-color: #ffffff; color: #4f46e5; border: 1px solid #c7d2fe; padding: 7px 12px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08); display: flex; align-items: center; gap: 6px; }
+        .btn-auth:hover { background-color: #4f46e5; color: #ffffff; }
+
+        .btn-menu-dots { background-color: #ffffff; color: #4f46e5; border: 1px solid #c7d2fe; width: 34px; height: 34px; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: bold; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08); display: flex; align-items: center; justify-content: center; }
+        .btn-menu-dots:hover { background-color: #4f46e5; color: #ffffff; }
+
+        .dropdown-menu { display: none; position: absolute; top: 44px; right: 0; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; width: 230px; overflow: hidden; z-index: 1100; }
+        .dropdown-section-title { padding: 8px 12px; font-size: 10px; font-weight: 700; color: #94a3b8; background: #f8fafc; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; }
+        .dropdown-item { padding: 9px 12px; font-size: 12px; font-weight: 600; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+        .dropdown-item:hover { background: #f1f5f9; color: #4f46e5; }
+        .dropdown-item.active-account { background: #e0e7ff; color: #4f46e5; }
+        .dropdown-item.logout { color: #dc2626; border-top: 1px solid #f1f5f9; }
+        .dropdown-item.delete-account { color: #dc2626; }
+        .dropdown-item.special-admin { color: #0284c7; background: #f0f9ff; border-top: 1px solid #e0f2fe; }
+
+        .msg-context-menu { display: none; position: fixed; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; width: 140px; overflow: hidden; z-index: 3000; }
+        .msg-context-item { padding: 10px 12px; font-size: 12px; font-weight: 600; color: #334155; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .msg-context-item:hover { background: #f1f5f9; color: #4f46e5; }
+        .msg-context-item.delete { color: #dc2626; border-top: 1px solid #f1f5f9; }
+
+        .verified-badge { display: inline-flex; align-items: center; justify-content: center; background-color: #0f172a; color: #ffffff; width: 13px; height: 13px; border-radius: 50%; font-size: 8px; font-weight: 900; margin-left: 4px; vertical-align: middle; }
+
+        .chat-wrapper { width: 100%; max-width: 420px; height: 85vh; max-height: 680px; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(226, 232, 240, 0.8); }
+        .chat-header { background: #4f46e5; color: white; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-header h3 { font-size: 14px; font-weight: 600; }
+        .badge { font-size: 10.5px; background: rgba(255, 255, 255, 0.2); padding: 3px 8px; border-radius: 20px; }
+
+        .chat-messages { flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f8fafc; }
+        .message { max-width: 85%; padding: 10px 12px; border-radius: 12px; font-size: 12.5px; line-height: 1.4; word-wrap: break-word; cursor: pointer; position: relative; }
+        .message.incoming { background: #ffffff; color: #334155; align-self: flex-start; border-bottom-left-radius: 3px; border: 1px solid #e2e8f0; }
+        .message.outgoing { background: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
+        .message .sender-name { font-size: 10px; display: block; margin-bottom: 3px; opacity: 0.85; font-weight: 700; }
+        .message .edited-label { font-size: 8.5px; opacity: 0.7; margin-left: 4px; font-style: italic; }
+
+        .chat-media-img { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 6px; display: block; object-fit: cover; cursor: pointer; }
+        .chat-media-video { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 6px; display: block; }
+        .chat-media-audio { width: 100%; max-width: 220px; margin-top: 6px; display: block; }
+        
+        .chat-file-card {
+            margin-top: 6px; padding: 9px 12px; background: rgba(0,0,0,0.05); border-radius: 8px;
+            display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; border: 1px solid rgba(0,0,0,0.1);
+        }
+        .message.outgoing .chat-file-card { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; }
+
+        .link-text-anchor { color: inherit; text-decoration: underline; word-break: break-all; }
+
+        .chat-input-area { padding: 10px 14px; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; align-items: center; }
+        .chat-input-area input[type="text"] { flex: 1; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 10px; outline: none; font-size: 12.5px; }
+        .chat-input-area input[type="text"]:focus { border-color: #4f46e5; }
+
+        .btn-attach {
+            background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; width: 36px; height: 36px;
+            border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;
+        }
+        .btn-attach:hover { background: #e2e8f0; color: #0f172a; }
+
+        .chat-input-area button.btn-send { background: #4f46e5; color: white; border: none; padding: 0 14px; height: 36px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 12.5px; }
+
+        /* UI BAN SCREEN KHUSUS */
+        .ban-screen { width: 100%; max-width: 420px; height: 85vh; max-height: 680px; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px; text-align: center; border: 1px solid rgba(226, 232, 240, 0.8); }
+        .ban-icon { font-size: 48px; margin-bottom: 12px; }
+        .ban-title { font-size: 18px; font-weight: 700; color: #dc2626; margin-bottom: 8px; }
+        .ban-desc { font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 20px; }
+        .btn-ban-logout { background: #dc2626; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; width: 100%; }
+        .btn-ban-logout:hover { background: #b91c1c; }
+
+        .admin-dashboard { display: none; width: 100%; max-width: 950px; height: 85vh; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); overflow: hidden; grid-template-columns: 270px 1fr; border: 1px solid rgba(226, 232, 240, 0.8); }
+        .sidebar-users { background: #f8fafc; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 14px; font-weight: 700; font-size: 13px; border-bottom: 1px solid #e2e8f0; background: #ffffff; color: #0f172a; }
+        .user-list { flex: 1; overflow-y: auto; padding: 6px; }
+        .user-item { padding: 9px 10px; cursor: pointer; border-radius: 8px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .user-item:hover { background: #f1f5f9; }
+        .user-item.active { background: #e0e7ff; }
+        .user-item .uname { font-weight: 600; font-size: 12.5px; color: #1e293b; }
+        
+        .admin-action-btns { display: flex; gap: 4px; }
+        .btn-reset-pw { background: #fef08a; color: #854d0e; border: none; padding: 4px 7px; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: 700; }
+        .btn-ban-user { background: #fee2e2; color: #991b1b; border: none; padding: 4px 7px; border-radius: 6px; cursor: pointer; font-size: 10px; font-weight: 700; }
+
+        .admin-chat-pane { display: flex; flex-direction: column; background: #ffffff; overflow: hidden; }
+        .admin-chat-header { padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-weight: 700; font-size: 14px; color: #0f172a; background: #ffffff; display: flex; align-items: center; justify-content: space-between; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 2000; padding: 14px; }
+        .modal-content { background: white; padding: 20px; border-radius: 18px; width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 25px 50px rgba(0,0,0,0.25); }
+        .modal-content h3 { color: #0f172a; font-size: 16px; font-weight: 700; text-align: center; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 11px; font-weight: 600; color: #475569; }
+        .modal-content input, .modal-content select { padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12.5px; outline: none; background: #fff; }
+        
+        .auth-btn-group { display: flex; gap: 8px; margin-top: 4px; }
+        .btn-submit { flex: 1; background: #4f46e5; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12.5px; text-align: center; }
+        .btn-register { flex: 1; background: #0ea5e9; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12.5px; text-align: center; }
+        .btn-submit:hover { background: #4338ca; }
+        .btn-register:hover { background: #0284c7; }
+
+        .info-box { font-size: 11px; color: #475569; background: #f1f5f9; padding: 8px; border-radius: 8px; border-left: 3px solid #4f46e5; }
+        .error-msg { color: #dc2626; font-size: 11.5px; text-align: center; display: none; font-weight: 700; background: #fee2e2; padding: 8px; border-radius: 6px; border: 1px solid #f87171; }
+        .btn-cancel { background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 12px; font-weight: 600; margin-top: -4px; }
+
+        @media (max-width: 768px) {
+            body { padding: 0; align-items: flex-end; }
+            .chat-wrapper, .ban-screen, .admin-dashboard { width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; border: none; }
+            .admin-dashboard { grid-template-columns: 1fr; }
+            .admin-dashboard.show-chat .sidebar-users { display: none; }
+            .admin-dashboard.show-chat .admin-chat-pane { display: flex; }
+            .admin-dashboard:not(.show-chat) .admin-chat-pane { display: none; }
+            .admin-dashboard:not(.show-chat) .sidebar-users { display: flex; height: 100%; }
+        }
+    </style>
+</head>
+<body onclick="closeAllMenus()">
+
+    <div class="auth-container">
+        <button class="btn-auth" id="authBtn" onclick="openLoginModal()">
+            <span>👤</span> <span id="authBtnText">Login / Akun</span>
+        </button>
+        <button class="btn-menu-dots" id="dotsMenuBtn" onclick="toggleDropdown(event)" title="Menu Opsi">⋮</button>
+        
+        <div class="dropdown-menu" id="profileDropdown">
+            <div id="adminNavDropdownSection" style="display:none;">
+                <div class="dropdown-section-title">Navigasi Admin</div>
+                <div class="dropdown-item" onclick="backToSidebar()">← Kembali ke Daftar User</div>
+                <div class="dropdown-section-title" style="margin-top: 4px;">Ganti Akun Instan</div>
+            </div>
+
+            <div id="ownerOnlyMenuSection" style="display:none;">
+                <div class="dropdown-section-title">Kontrol Owner</div>
+                <div class="dropdown-item special-admin" onclick="openAddAdminModal()">👑 Tambahkan Akun Admin</div>
+            </div>
+
+            <div id="userNavDropdownTitle" class="dropdown-section-title">Ganti Akun Instan</div>
+            <div id="accountSwitcherList"></div>
+            
+            <div class="dropdown-section-title" style="margin-top: 4px;">Pengaturan</div>
+            <div class="dropdown-item" onclick="openLoginModal()">➕ Tambah / Login Akun Lain</div>
+            <div class="dropdown-item" onclick="openProfileSettingsModal()">⚙️ Ubah Username / Sandi</div>
+            <div class="dropdown-item logout" onclick="triggerLogout()">🚪 Keluar (Logout)</div>
+            <div id="dynamicDeleteContainer"></div>
+        </div>
+    </div>
+
+    <div class="msg-context-menu" id="msgContextMenu">
+        <div class="msg-context-item" onclick="triggerEditMessage()">✏️ Edit Pesan</div>
+        <div class="msg-context-item delete" onclick="triggerDeleteMessage()">🗑️ Hapus Pesan</div>
+    </div>
+
+    <!-- UI BLOKIR / BAN SCREEN -->
+    <div class="ban-screen" id="banScreen" style="display:none;">
+        <div class="ban-icon">⛔</div>
+        <div class="ban-title">Akun Anda Dibanned</div>
+        <div class="ban-desc" id="banScreenDesc">Akun Anda telah dikenai sanksi pemblokiran oleh Admin. Anda tidak dapat mengakses ruang chat saat ini.</div>
+        <button class="btn-ban-logout" onclick="forceBanLogout()">Keluar (Logout)</button>
+    </div>
+
+    <!-- TAMPILAN USER -->
+    <div class="chat-wrapper" id="userView" style="display:none;">
+        <div class="chat-header">
+            <h3 id="userHeaderTitle">Live Chat</h3>
+            <span class="badge" id="badgeUser">Tamu</span>
+        </div>
+        <div class="chat-messages" id="userChatMessages"></div>
+        <div class="chat-input-area">
+            <input type="file" id="fileInputUser" style="display:none" onchange="handleFileSelected(event)">
+            <button class="btn-attach" onclick="document.getElementById('fileInputUser').click()" title="Kirim File/Foto">📎</button>
+            <input type="text" id="userMessageInput" placeholder="Ketik pesan atau kirim file..." onkeypress="checkUserEnter(event)">
+            <button class="btn-send" onclick="sendUserMessage()">Kirim</button>
+        </div>
+    </div>
+
+    <!-- TAMPILAN ADMIN -->
+    <div class="admin-dashboard" id="adminView">
+        <div class="sidebar-users">
+            <div class="sidebar-header">Daftar Akun User</div>
+            <div class="user-list" id="sidebarUserList"></div>
+        </div>
+        <div class="admin-chat-pane">
+            <div class="admin-chat-header">
+                <span id="activeChatTitle">Pilih user untuk membalas</span>
+            </div>
+            <div class="chat-messages" id="adminChatMessages">
+                <div style="text-align:center; color:#94a3b8; margin-top:50px; font-size:12.5px;">Belum ada ruang chat yang dipilih.</div>
+            </div>
+            <div class="chat-input-area" id="adminInputArea" style="display:none;">
+                <input type="file" id="fileInputAdmin" style="display:none" onchange="handleFileSelected(event)">
+                <button class="btn-attach" onclick="document.getElementById('fileInputAdmin').click()" title="Kirim File/Foto">📎</button>
+                <input type="text" id="adminMessageInput" placeholder="Balas pesan user..." onkeypress="checkAdminEnter(event)">
+                <button class="btn-send" onclick="sendAdminMessage()">Balas</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LOGIN / DAFTAR -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <h3>Autentikasi Akun</h3>
+            <div class="info-box">Login For Chating with TTi/Bibixse</div>
+            <div class="form-group"><label>Username</label><input type="text" id="loginUsername" placeholder="Contoh: owner atau nama kamu"></div>
+            <div class="form-group"><label>Password Akun</label><input type="password" id="loginPassword" placeholder="Password rahasia"></div>
+            <span class="error-msg" id="loginError">Username atau password salah!</span>
+            
+            <div class="auth-btn-group">
+                <button class="btn-submit" onclick="processLogin()">Masuk</button>
+                <button class="btn-register" onclick="processRegister()">Daftar Baru</button>
+            </div>
+            <button class="btn-cancel" onclick="closeLoginModal()">Batal</button>
+        </div>
+    </div>
+
+    <!-- MODAL TAMBAH ADMIN OLEH OWNER -->
+    <div class="modal" id="addAdminModal">
+        <div class="modal-content">
+            <h3>Tambah Akun Admin</h3>
+            <div class="info-box">👑 Buat akun admin baru langsung dari panel owner asli.</div>
+            <div class="form-group"><label>Username Admin Baru</label><input type="text" id="newAdminUsername" placeholder="Contoh: admin_tambahan"></div>
+            <div class="form-group"><label>Password Admin Baru</label><input type="password" id="newAdminPassword" placeholder="Password aman"></div>
+            <span class="error-msg" id="addAdminError">Username sudah digunakan!</span>
+            <button class="btn-submit" style="width: 100%; margin-top: 4px;" onclick="executeAddAdmin()">Simpan Admin Baru</button>
+            <button class="btn-cancel" onclick="closeAddAdminModal()">Batal</button>
+        </div>
+    </div>
+
+    <!-- MODAL RESET PASSWORD -->
+    <div class="modal" id="resetModal">
+        <div class="modal-content">
+            <h3>Ganti Password User</h3>
+            <p style="font-size: 12px; color: #475569;" id="resetTargetInfo">Atur password baru.</p>
+            <div class="form-group"><label>Password Baru</label><input type="password" id="newPasswordInput" placeholder="Password baru"></div>
+            <button class="btn-submit" style="background: #eab308; width: 100%;" onclick="executeResetPassword()">Simpan</button>
+            <button class="btn-cancel" onclick="closeResetModal()">Batal</button>
+        </div>
+    </div>
+
+    <!-- MODAL BAN USER -->
+    <div class="modal" id="banModal">
+        <div class="modal-content">
+            <h3>Sanksi Banned User</h3>
+            <p style="font-size: 12px; color: #475569;" id="banTargetInfo">Pilih durasi sanksi pemblokiran.</p>
+            <div class="form-group">
+                <label>Tipe / Durasi Banned</label>
+                <select id="banDurationSelect" onchange="toggleBanDurationInputs()">
+                    <option value="permanent">Permanen (Hapus Akun & Chat)</option>
+                    <option value="days">Beberapa Hari</option>
+                    <option value="hours">Beberapa Jam</option>
+                    <option value="minutes">Beberapa Menit</option>
+                    <option value="seconds">Beberapa Detik</option>
+                </select>
+            </div>
+            <div class="form-group" id="banAmountGroup" style="display:none;">
+                <label id="banAmountLabel">Jumlah Angka</label>
+                <input type="number" id="banAmountInput" min="1" value="1" placeholder="Masukkan jumlah">
+            </div>
+            <button class="btn-submit" style="background: #dc2626; width: 100%;" onclick="executeBanUser()">Terapkan Ban</button>
+            <button class="btn-cancel" onclick="closeBanModal()">Batal</button>
+        </div>
+    </div>
+
+    <!-- MODAL UBAH PROFIL -->
+    <div class="modal" id="profileSettingsModal">
+        <div class="modal-content">
+            <h3>Ubah Profil Akun</h3>
+            <div class="form-group"><label>Username Baru</label><input type="text" id="updateUsernameInput" placeholder="Username baru"></div>
+            <div class="form-group" id="oldPasswordGroup"><label>Password Lama</label><input type="password" id="verifyOldPassword" placeholder="Password lama"></div>
+            <div class="form-group"><label>Password Baru (Opsional)</label><input type="password" id="updatePasswordInput" placeholder="Kosongkan jika tetap"></div>
+            <span class="error-msg" id="profileUpdateError">Password lama salah!</span>
+            <button class="btn-submit" style="width: 100%;" onclick="executeProfileUpdate()">Simpan Perubahan</button>
+            <button class="btn-cancel" onclick="closeProfileSettingsModal()">Batal</button>
+        </div>
+    </div>
+
+    <!-- SCRIPT FIREBASE & LOGIKA APLIKASI -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, push, set, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC5GI7cqUQB8Gu4NoKGDR4zD0xJ4kUowVw",
+            authDomain: "website-chat-8ad83.firebaseapp.com",
+            databaseURL: "https://website-chat-8ad83-default-rtdb.firebaseio.com",
+            projectId: "website-chat-8ad83",
+            storageBucket: "website-chat-8ad83.appspot.com",
+            messagingSenderId: "558083628282",
+            appId: "1:558083628282:web:1738900d71414b554c3d43",
+            measurementId: "G-EQ2Z8W0GD6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.accounts = JSON.parse(localStorage.getItem('secure_accounts')) || {
+            "owner": { password: "admin123", role: "admin", isOwner: true }
+        };
+
+        let foundOwnerKey = null;
+        for (let u in window.accounts) {
+            if (window.accounts[u].isOwner) {
+                foundOwnerKey = u;
+                break;
+            }
+        }
+        if (!foundOwnerKey) {
+            if (window.accounts["owner"]) {
+                window.accounts["owner"].isOwner = true;
+                window.accounts["owner"].role = "admin";
+            } else {
+                let firstKey = Object.keys(window.accounts)[0];
+                if (firstKey) {
+                    window.accounts[firstKey].isOwner = true;
+                    window.accounts[firstKey].role = "admin";
+                } else {
+                    window.accounts["owner"] = { password: "admin123", role: "admin", isOwner: true };
+                }
+            }
+        }
+        localStorage.setItem('secure_accounts', JSON.stringify(window.accounts));
+
+        window.currentUser = JSON.parse(localStorage.getItem('secure_session')) || null;
+        window.activeChatUser = localStorage.getItem('secure_active_target') || null;
+        let targetUserToReset = null;
+        let targetUserToBan = null;
+        let selectedMsgKey = null;
+        let selectedChatTargetUser = null;
+        let allFirebaseMessages = {};
+
+        function getOwnerUsername() {
+            for (let u in window.accounts) {
+                if (window.accounts[u].isOwner) return u;
+            }
+            return 'owner';
+        }
+
+        function getAdminUsername() {
+            for (let uname in window.accounts) {
+                if (window.accounts[uname].role === 'admin') return uname;
+            }
+            return getOwnerUsername();
+        }
+
+        window.initApp = function() {
+            const dotsBtn = document.getElementById('dotsMenuBtn');
+            const banScreen = document.getElementById('banScreen');
+            const userView = document.getElementById('userView');
+            const adminView = document.getElementById('adminView');
+
+            if (!window.currentUser || !window.accounts[window.currentUser.username]) {
+                banScreen.style.display = 'none';
+                userView.style.display = 'none';
+                adminView.style.display = 'none';
+                dotsBtn.style.display = 'none';
+                openLoginModal();
+                return;
+            }
+
+            let currentUname = window.currentUser.username;
+            let ownerUname = getOwnerUsername();
+
+            if (currentUname === ownerUname || window.accounts[currentUname]?.isOwner) {
+                window.currentUser.role = 'admin';
+                window.accounts[currentUname].role = 'admin';
+                window.accounts[currentUname].isOwner = true;
+                localStorage.setItem('secure_session', JSON.stringify(window.currentUser));
+                localStorage.setItem('secure_accounts', JSON.stringify(window.accounts));
+            }
+
+            // PENGAMAN MUTLAK: Akun dengan role admin/owner TIDAK AKAN PERNAH DIANGGAP BANNED
+            let isAdminAccount = window.currentUser.role === 'admin' || window.accounts[currentUname]?.role === 'admin';
+            let isBanned = isAdminAccount ? false : checkBanStatus();
+
+            if (isBanned) {
+                dotsBtn.style.display = 'none';
+                userView.style.display = 'none';
+                adminView.style.display = 'none';
+                banScreen.style.display = 'flex';
+                return;
+            }
+
+            dotsBtn.style.display = 'flex';
+            banScreen.style.display = 'none';
+            const authBtnText = document.getElementById('authBtnText');
+            const adminName = getAdminUsername();
+
+            renderAccountSwitcher();
+
+            const ownerMenuSection = document.getElementById('ownerOnlyMenuSection');
+            const deleteContainer = document.getElementById('dynamicDeleteContainer');
+
+            let isCurrentOwner = window.accounts[currentUname]?.isOwner || currentUname === ownerUname;
+            if (isCurrentOwner) {
+                ownerMenuSection.style.display = 'block';
+                deleteContainer.innerHTML = ''; 
+            } else {
+                ownerMenuSection.style.display = 'none';
+                deleteContainer.innerHTML = `<div class="dropdown-item delete-account" onclick="triggerDeleteAccount()">🗑️ Hapus Akun Ini</div>`;
+            }
+
+            if (window.currentUser.role === 'admin') {
+                userView.style.display = 'none';
+                adminView.style.display = 'grid';
+                authBtnText.innerHTML = `Admin (${currentUname})<span class="verified-badge">✓</span>`;
+                
+                document.getElementById('adminNavDropdownSection').style.display = 'block';
+                document.getElementById('userNavDropdownTitle').style.display = 'none';
+
+                if (window.activeChatUser && !allFirebaseMessages[window.activeChatUser]) {
+                    window.activeChatUser = null;
+                    localStorage.removeItem('secure_active_target');
+                }
+
+                loadAdminSidebar();
+                if (window.activeChatUser && allFirebaseMessages[window.activeChatUser]) {
+                    loadAdminChat(window.activeChatUser);
+                } else {
+                    adminView.classList.remove('show-chat');
+                }
+            } else {
+                adminView.style.display = 'none';
+                userView.style.display = 'flex';
+                authBtnText.innerText = currentUname;
+                
+                document.getElementById('adminNavDropdownSection').style.display = 'none';
+                document.getElementById('userNavDropdownTitle').style.display = 'block';
+
+                document.getElementById('userHeaderTitle').innerHTML = `Chat dengan ${adminName}<span class="verified-badge">✓</span>`;
+                document.getElementById('badgeUser').innerText = currentUname;
+                loadUserMessages();
+            }
+        }
+
+        function checkBanStatus() {
+            if (!window.currentUser) return false;
+            let bans = JSON.parse(localStorage.getItem('secure_bans')) || {};
+            let uname = window.currentUser.username;
+
+            if (bans[uname]) {
+                let banTime = bans[uname];
+                if (banTime === 'permanent') {
+                    document.getElementById('banScreenDesc').innerHTML = `Akun <b>"${uname}"</b> telah dibanned secara <b>permanen</b> oleh Admin.`;
+                    return true;
+                } else if (Date.now() < banTime) {
+                    let sRemaining = Math.ceil((banTime - Date.now()) / 1000);
+                    let hours = Math.floor(sRemaining / 3600);
+                    let mins = Math.floor((sRemaining % 3600) / 60);
+                    let secs = sRemaining % 60;
+                    let timeStr = hours > 0 ? `${hours} jam ${mins} menit` : (mins > 0 ? `${mins} menit ${secs} detik` : `${secs} detik`);
+                    document.getElementById('banScreenDesc').innerHTML = `Akun <b>"${uname}"</b> sedang dibanned sementara.<br>Sisa waktu sanksi: <b>${timeStr}</b>.`;
+                    return true;
+                } else {
+                    delete bans[uname];
+                    localStorage.setItem('secure_bans', JSON.stringify(bans));
+                }
+            }
+            return false;
+        }
+
+        window.forceBanLogout = function() {
+            localStorage.removeItem('secure_session');
+            localStorage.removeItem('secure_active_target');
+            window.currentUser = null;
+            document.getElementById('banScreen').style.display = 'none';
+            initApp();
+        }
+
+        onValue(ref(db, 'chats/'), (snapshot) => {
+            allFirebaseMessages = snapshot.val() || {};
+            if (window.currentUser) {
+                if (window.currentUser.role === 'admin') {
+                    loadAdminSidebar();
+                    if (window.activeChatUser && allFirebaseMessages[window.activeChatUser]) {
+                        loadAdminChat(window.activeChatUser);
+                    }
+                } else {
+                    loadUserMessages();
+                }
+            }
+        });
+
+        window.renderAccountSwitcher = function() {
+            const switcherList = document.getElementById('accountSwitcherList');
+            switcherList.innerHTML = '';
+            for (let uname in window.accounts) {
+                let isAdmin = window.accounts[uname].role === 'admin';
+                let roleLabel = isAdmin ? ' (Admin)' : ' (User)';
+                let isActive = window.currentUser && window.currentUser.username === uname;
+                const item = document.createElement('div');
+                item.className = `dropdown-item ${isActive ? 'active-account' : ''}`;
+                item.innerHTML = `<span>${isAdmin ? '👑 ' : '👤 '} ${uname}${roleLabel}</span>${isActive ? '✓' : ''}`;
+                item.onclick = () => switchToAccount(uname);
+                switcherList.appendChild(item);
+            }
+        }
+
+        window.switchToAccount = function(uname) {
+            let isAdminAccount = window.accounts[uname]?.role === 'admin';
+            let bans = JSON.parse(localStorage.getItem('secure_bans')) || {};
+            
+            if (!isAdminAccount && bans[uname]) {
+                if (bans[uname] === 'permanent' || Date.now() < bans[uname]) {
+                    alert("Gagal beralih: Akun ini sedang dibanned!");
+                    return;
+                }
+            }
+
+            if (window.accounts[uname]) {
+                let role = window.accounts[uname].role;
+                window.currentUser = { username: uname, role: role };
+                localStorage.setItem('secure_session', JSON.stringify(window.currentUser));
+                document.getElementById('profileDropdown').style.display = 'none';
+                initApp();
+            }
+        }
+
+        window.toggleDropdown = function(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+            document.getElementById('msgContextMenu').style.display = 'none';
+        }
+
+        window.closeAllMenus = function() {
+            document.getElementById('profileDropdown').style.display = 'none';
+            document.getElementById('msgContextMenu').style.display = 'none';
+        }
+
+        window.triggerLogout = function() {
+            if (!window.currentUser) return;
+            let currentUname = window.currentUser.username;
+            
+            if (confirm("Keluar dari akun " + currentUname + "?")) {
+                let remainingAccounts = Object.keys(window.accounts).filter(u => u !== currentUname);
+
+                if (remainingAccounts.length > 0) {
+                    let nextUname = remainingAccounts[0];
+                    for (let u of remainingAccounts) {
+                        if (window.accounts[u].role === 'admin') {
+                            nextUname = u;
+                            break;
+                        }
+                    }
+
+                    let nextRole = window.accounts[nextUname].role;
+                    window.currentUser = { username: nextUname, role: nextRole };
+                    localStorage.setItem('secure_session', JSON.stringify(window.currentUser));
+                    
+                    window.activeChatUser = null;
+                    localStorage.removeItem('secure_active_target');
+
+                    alert(`Keluar dari ${currentUname}. Beralih otomatis ke akun ${nextUname}.`);
+                    initApp();
+                } else {
+                    localStorage.removeItem('secure_session');
+                    localStorage.removeItem('secure_active_target');
+                    window.currentUser = null;
+                    initApp();
+                }
+            }
+        }
+
+        window.triggerDeleteAccount = function() {
+            if (!window.currentUser) return;
+            let currentUname = window.currentUser.username;
+
+            if (window.accounts[currentUname]?.isOwner) {
+                alert("Akun utama owner tidak dapat dihapus!");
+                return;
+            }
+
+            if (confirm(`Peringatan: Hapus akun "${currentUname}" beserta seluruh riwayat chat-nya?`)) {
+                delete window.accounts[currentUname];
+                localStorage.setItem('secure_accounts', JSON.stringify(window.accounts));
+                remove(ref(db, `chats/${currentUname}`));
+
+                let remainingAccounts = Object.keys(window.accounts);
+
+                if (remainingAccounts.length > 0) {
+                    let nextUname = remainingAccounts[0];
+                    for (let u of remainingAccounts) {
+                        if (window.accounts[u].role === 'admin') {
+                            nextUname = u;
+                            break;
+                        }
+                    }
+
+                    let nextRole = window.accounts[nextUname].role;
+                    window.currentUser = { username: nextUname, role: nextRole };
+                    localStorage.setItem('secure_session', JSON.stringify(window.currentUser));
+                    
+                    window.activeChatUser = null;
+                    localStorage.removeItem('secure_active_target');
+
+                    alert(`Akun ${currentUname} dan riwayat chat-nya berhasil dihapus.`);
+                    initApp();
+                } else {
+                    localStorage.removeItem('secure_session');
+                    localStorage.removeItem('secure_active_target');
+                    localStorage.removeItem('secure_accounts');
+                    window.currentUser = null;
+                    window.accounts = {};
+                    alert(`Akun ${currentUname} dihapus.`);
+                    initApp();
+                }
+            }
+        }
+
+        window.openLoginModal = function() {
+            document.getElementById('profileDropdown').style.display = 'none';
+            document.getElementById('loginModal').style.display = 'flex';
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginError').style.display = 'none';
+        }
+        window.closeLoginModal = function() { document.getElementById('loginModal').style.display = 'none'; }
+
+        window.openAddAdminModal = function() {
+            document.getElementById('profileDropdown').style.display = 'none';
+            document.getElementById('newAdminUsername').value = '';
+            document.getElementById('newAdminPassword').value = '';
+            document.getElementById('addAdminError').style.display = 'none';
+            document.getElementById('addAdminModal').style.display = 'flex';
+        }
+        window.closeAddAdminModal = function() { document.getElementById('addAdminModal').style.display = 'none'; }
+
+        window.executeAddAdmin = function() {
+            const uInput = document.getElementById('newAdminUsername').value.trim();
+            const pInput = document.getElementById('newAdminPassword').value;
+            const errSpan = document.getElementById('addAdminError');
+
+            if (!uInput || !pInput) return alert('Isi username & password admin baru!');
+
+            let latestAccounts = JSON.parse(localStorage.getItem('secure_accounts')) || window.accounts;
+            window.accounts = latestAccounts;
+
+            if (window.accounts[uInput]) {
+                errSpan.style.display = 'block';
+                errSpan.innerText = "Username sudah digunakan!";
+                return;
+            }
+
+            window.accounts[uInput] = { password: pInput, role: 'admin', isOwner: false };
+            localStorage.setItem('secure_accounts', JSON.stringify(window.accounts));
+
+            closeAddAdminModal();
+            alert(`Berhasil menambahkan akun admin baru: "${uInput}"!`);
+            initApp();
+        }
+
+        window.processLogin = function() {
+            const uInput = document.getElementById('loginUsername').value.trim();
+            const pInput = document.getElementById('loginPassword').value;
+            const errSpan = document.getElementById('loginError');
+
+            if (!uInput || !pInput) return alert('Isi username & password!');
+
+            let latestAccounts = JSON.parse(localStorage.getItem('secure_accounts')) || window.accounts;
+            window.accounts = latestAccounts;
+
+            let isAdminAccount = window.accounts[uInput]?.role === 'admin';
+
+            if (!isAdminAccount) {
+                let bans = JSON.parse(localStorage.getItem('secure_bans')) || {};
+                if (bans[uInput]) {
+                    let banTime = bans[uInput];
+                    errSpan.style.display = 'block';
+                    if (banTime === 'permanent') {
+                        errSpan.innerText = `❌ Akun "${uInput}" telah DIBANNED PERMANEN oleh Admin!`;
+                    } else {
+                        let sRemaining = Math.ceil((banTime - Date.now()) / 1000);
+                        if (sRemaining > 0) {
+                            let hours = Math.floor(sRemaining / 3600);
+                            let mins = Math.floor((sRemaining % 3600) / 60);
+                            let secs = sRemaining % 60;
+                            let timeStr = hours > 0 ? `${hours} jam ${mins} menit` : (mins > 0 ? `${mins} menit ${secs} detik` : `${secs} detik`);
+                            errSpan.innerText = `⏳ Akun "${uInput}" sedang dibanned sementara. Sisa waktu: ${timeStr}.`;
+                            return;
+                        } else {
+                            delete bans[uInput];
+                            localStorage.setItem('secure_bans', JSON.stringify(bans));
+                        }
+                    }
+                    return;
+                }
+            }
+
+            if (!window.accounts[uInput]) {
+                errSpan.style.display = 'block';
+                errSpan.innerText = "Username belum terdaftar! Silakan klik 'Daftar Baru'.";
+                return;
+            }
+
+            if (window.accounts[uInput].password !== pInput) {
+                errSpan.style.display = 'block';
+                errSpan.innerText = "Password salah!";
+                return;
+            }
+
+            errSpan.style.display = 'none';
+            let role = window.accounts[uInput].role;
+
+            window.currentUser = { username: uInput, role: role };
+            localStorage.setItem('secure_session', JSON.stringify(window.currentUser));
+            closeLoginModal();
+            initApp();
+        }
+
+        window.processRegister = function() {
+            const uInput = document.getElementById('loginUsername').value.trim();
+            const pInput = document.getElementById('loginPassword').value;
+            const errSpan = document.getElementById('loginError');
+
+            if (!uInput || !pInput) return alert('Isi username & password untuk mendaftar!');
+
+            let latestAccounts = JSON.parse(localStorage.getItem('secure_accounts')) || window.accounts;
+            window.accounts = latestAccounts;
+
+            if (window.accounts[uInput]) {
+                errSpan.style.display = 'block';
+                errSpan.innerText = "Username sudah digunakan! Pilih username lain.";
+                return;
+            }
+
+            window.accounts[uInput] = { password: pInput, role: 'user', isOwner: false };
+            localStorage.setItem('secure_accounts', JSON.stringify(window.accounts));
+            
+            window.currentUser = { username: uInput, role: 'user' };
+            localStorage.setItem('secure_session', JSON.stringify(window.currentUser));
+            
+            closeLoginModal();
+            alert(`Akun "${uInput}" berhasil didaftarkan sebagai User!`);
+            initApp();
+        }
+
+        window.openResetModal = function(uname, event) {
+            event.stopPropagation();
+            targetUserToReset = uname;
+            document.getElementById('resetTargetInfo').innerText = `Reset sandi untuk: "${uname}"`;
+            document.getElementById('newPasswordInput').value = '';
+            document.getElementById('resetModal').style.display = 'flex';
+        }
+        window.closeResetModal = function() { document.getElementById('resetModal').style.display = 'none'; }
+        
+        window.executeResetPassword = function() {
+            let newPw = document.getElementById('newPasswordInput').value.trim();
+            if (!newPw) return alert('Masukkan password baru!');
+            
+            if (window.accounts[targetUserToReset]) {
+                window.accounts[targetUserToReset].password = newPw;
+            }
+
+            localStorage.setItem('secure_accounts', JSON.stringify(window.accounts));
+            alert("Password untuk user " + targetUserToReset + " berhasil diperbarui!");
+            closeResetModal();
+            loadAdminSidebar();
+        }
+
+        window.openBanModal = function(uname, event) {
+            event.stopPropagation();
+            targetUserToBan = uname;
+            document.getElementById('banTargetInfo').innerText = `Terapkan sanksi ban untuk: "${uname}"`;
+            document.getElementById('banDurationSelect').value = 'permanent';
+            toggleBanDurationInputs();
+            document.getElementById('banModal').style.display = 'flex';
+        }
+        window.closeBanModal = function() { document.getElementById('banModal').style.display = 'none'; }
+
+        window.toggleBanDurationInputs = function() {
+            let val = document.getElementById('banDurationSelect').value;
+            let group = document.getElementById('banAmountGroup');
+            let label = document.getElementById('banAmountLabel');
+
+            if (val === 'permanent') {
+                group.style.display = 'none';
+            } else {
+                group.style.display = 'flex';
+                if (val === 'days') label.innerText = "Jumlah Hari";
+                if (val === 'hours') label.innerText = "Jumlah Jam";
+                if (val === 'minutes') label.innerText = "Jumlah Menit";
+                if (val === 'seconds') label.innerText = "Jumlah Detik";
+            }
+        }
+
+        window.executeBanUser = function() {
+            let type = document.getElementById('banDurationSelect').value;
+            let amount = parseInt(document.getElementById('banAmountInput').value) || 1;
+            let targetUname = targetUserToBan;
+
+            let bans = JSON.parse(localStorage.getItem('secure_bans')) || {};
+
+            if (type === 'permanent') {
+                bans[targetUname] = 'permanent';
+                delete window.accounts[targetUname];
+                localStorage.setItem('secure_accounts', JSON.stringify(window.accounts));
+                remove(ref(db, `chats/${targetUname}`));
+            } else {
+                let ms = 0;
+                if (type === 'days') ms = amount * 24 * 60 * 60 * 1000;
+                if (type === 'hours') ms = amount * 60 * 60 * 1000;
+                if (type === 'minutes') ms = amount * 60 * 1000;
+                if (type === 'seconds') ms = amount * 1000;
+                bans[targetUname] = Date.now() + ms;
+            }
+
+            localStorage.setItem('secure_bans', JSON.stringify(bans));
+
+            if (window.activeChatUser === targetUname) {
+                window.activeChatUser = null;
+                localStorage.removeItem('secure_active_target');
+            }
+
+            closeBanModal();
+            alert(`User "${targetUname}" berhasil dikenai sanksi ban.`);
+            loadAdminSidebar();
+        }
+
+        window.openProfileSettingsModal = function() {
+            document.getElementById('profileDropdown').style.display = 'none';
+            document.getElementById('updateUsernameInput').value = window.currentUser.username;
+            document.getElementById('updatePasswordInput').value = '';
+            document.getElementById('profileUpdateError').style.display = 'none';
+            
+            const oldPassGroup = document.getElementById('oldPasswordGroup');
+            let currentUname = window.currentUser.username;
+            
+            if (window.accounts[currentUname]?.isOwner) {
+                oldPassGroup.style.display = 'none';
+                document.getElementById('verifyOldPassword').value = 'BYPASSED';
+            } else {
+                oldPassGroup.style.display = 'flex';
+                document.getElementById('verifyOldPassword').value = '';
+            }
+
+            document.getElementById('profileSettingsModal').style.display = 'flex';
+        }
+        window.closeProfileSettingsModal = function() { document.getElementById('profileSettingsModal').style.display = 'none'; }
+
+        window.executeProfileUpdate = function() {
+            let oldPw = document.getElementById('verifyOldPassword').value;
+            let newUname = document.getElementById('updateUsernameInput').value.trim();
+            let newPw = document.getElementById('updatePasswordInput').value.trim();
+            let errSpan = document.getElementById('profileUpdateError');
+
+            if (!newUname) return alert('Username tidak boleh kosong!');
+
+            let currentUname = window.currentUser.username;
+            let accountData = window.accounts[currentUname];
+
+            if (!accountData.isOwner) {
+                if (!oldPw || accountData.password !== oldPw) {
+                    errSpan.style.display = 'block';
+                    errSpan.innerText = "Password lama salah!";
+                    return;
+                }
+            }
+            errSpan.style.display = 'none';
+
+            if (newUname !== currentUname) {
+                if (window.accounts[newUname]) {
+                    alert('Username sudah digunakan oleh akun lain!');
+                    return;
+                }
+
+                let finalPassword = newPw ? newPw : accountData.password;
+                let finalRole = accountData.role;
+                let finalIsOwner = accountData.isOwner || false;
+
+                window.accounts[newUname] = { password: finalPassword, role: finalRole, isOwner: finalIsOwner };
+                delete window.accounts[currentUname];
+
+                if (allFirebaseMessages[currentUname]) {
+                    allFirebaseMessages[newUname] = allFirebaseMessages[currentUname];
+                    delete allFirebaseMessages[currentUname];
+                    set(ref(db, `chats/${newUname}`), allFirebaseMessages[newUname]);
+                    remove(ref(db, `chats/${currentUname}`));
+                }
+
+                window.currentUser.username = newUname;
+            } else if (newPw) {
+                window.accounts[currentUname].password = newPw;
+            }
+
+            localStorage.setItem('secure_accounts', JSON.stringify(window.accounts));
+            localStorage.setItem('secure_session', JSON.stringify(window.currentUser));
+
+            if (window.activeChatUser === currentUname) {
+                window.activeChatUser = window.currentUser.username;
+                localStorage.setItem('secure_active_target', window.activeChatUser);
+            }
+
+            closeProfileSettingsModal();
+            alert("Profil berhasil diperbarui!");
+            initApp();
+        }
+
+        window.handleMessageInteraction = function(e, msgKey, chatOwner, senderName) {
+            e.preventDefault();
+            e.stopPropagation();
+            let isMyMsg = senderName === window.currentUser.username;
+            if (!isMyMsg) return;
+
+            selectedMsgKey = msgKey;
+            selectedChatTargetUser = chatOwner;
+            let menu = document.getElementById('msgContextMenu');
+            menu.style.display = 'block';
+            menu.style.left = `${Math.min(e.pageX, window.innerWidth - 140)}px`;
+            menu.style.top = `${Math.min(e.pageY, window.innerHeight - 80)}px`;
+        }
+
+        window.triggerEditMessage = function() {
+            document.getElementById('msgContextMenu').style.display = 'none';
+            if (!selectedMsgKey || !selectedChatTargetUser) return;
+            let currentText = allFirebaseMessages[selectedChatTargetUser]?.[selectedMsgKey]?.text || "";
+            let newText = prompt("Ubah pesan:", currentText);
+            if (newText !== null && newText.trim() !== "") {
+                set(ref(db, `chats/${selectedChatTargetUser}/${selectedMsgKey}/text`), newText.trim());
+                set(ref(db, `chats/${selectedChatTargetUser}/${selectedMsgKey}/edited`), true);
+            }
+        }
+
+        window.triggerDeleteMessage = function() {
+            document.getElementById('msgContextMenu').style.display = 'none';
+            if (confirm("Hapus pesan ini?")) {
+                remove(ref(db, `chats/${selectedChatTargetUser}/${selectedMsgKey}`));
+            }
+        }
+
+        window.handleFileSelected = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            let targetUser = window.currentUser.role === 'admin' ? window.activeChatUser : window.currentUser.username;
+            if (!targetUser) {
+                alert("Pilih ruang chat terlebih dahulu!");
+                event.target.value = '';
+                return;
+            }
+
+            if (file.size < 3.5 * 1024 * 1024) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64Data = e.target.result;
+                    let senderName = window.currentUser.username;
+
+                    push(ref(db, `chats/${targetUser}`), {
+                        sender: senderName,
+                        text: `[File: ${file.name}]`,
+                        fileData: base64Data,
+                        fileType: file.type,
+                        fileName: file.name,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        edited: false
+                    });
+                    event.target.value = '';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert(`File "${file.name}" berukuran besar (${(file.size / (1024*1024)).toFixed(1)}MB).\n\nTips: Upload file ini ke GitHub Releases atau Google Drive, lalu salin (copy) link download-nya dan paste ke kolom chat.`);
+                event.target.value = '';
+            }
+        }
+
+        window.formatMessageContent = function(msg) {
+            let html = '';
+            if (msg.fileData) {
+                if (msg.fileType && msg.fileType.startsWith('image/')) {
+                    html += `<img src="${msg.fileData}" class="chat-media-img" onclick="window.open('${msg.fileData}')">`;
+                } else if (msg.fileType && msg.fileType.startsWith('video/')) {
+                    html += `<video src="${msg.fileData}" controls class="chat-media-video"></video>`;
+                } else if (msg.fileType && msg.fileType.startsWith('audio/')) {
+                    html += `<audio src="${msg.fileData}" controls class="chat-media-audio"></audio>`;
+                }
+                html += `
+                    <a href="${msg.fileData}" download="${msg.fileName}" class="chat-file-card">
+                        <span>📥</span>
+                        <div style="overflow:hidden;">
+                            <div style="font-weight:700; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${msg.fileName}</div>
+                            <div style="font-size:9px; opacity:0.8;">Klik untuk Download File</div>
+                        </div>
+                    </a>
+                `;
+            } else {
+                html += parseLinkAndFormat(msg.text);
+            }
+            return html;
+        }
+
+        window.parseLinkAndFormat = function(text) {
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            let match = text.match(urlRegex);
+            if (!match) return escapeHtml(text);
+
+            let url = match[0];
+            let cleanText = escapeHtml(text.replace(url, ''));
+            let fallbackDomain;
+            try { fallbackDomain = new URL(url).hostname; } catch(e) { fallbackDomain = "Link Download"; }
+
+            let fileCardHTML = `
+                <a href="${url}" target="_blank" class="chat-file-card" style="margin-top:6px;">
+                    <span>📦</span>
+                    <div style="overflow:hidden;">
+                        <div style="font-weight:700; font-size:11px;">Buka Link / Unduh File</div>
+                        <div style="font-size:9px; opacity:0.8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fallbackDomain}</div>
+                    </div>
+                </a>
+            `;
+            return `${cleanText}<a href="${url}" target="_blank" class="link-text-anchor">${url}</a>${fileCardHTML}`;
+        }
+
+        window.sendUserMessage = function() {
+            const input = document.getElementById('userMessageInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            push(ref(db, `chats/${window.currentUser.username}`), {
+                sender: window.currentUser.username,
+                text: text,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                edited: false
+            });
+            input.value = '';
+        }
+        window.checkUserEnter = function(e) { if (e.key === 'Enter') sendUserMessage(); }
+
+        window.loadUserMessages = function() {
+            const container = document.getElementById('userChatMessages');
+            let myChats = allFirebaseMessages[window.currentUser.username] || {};
+            const adminName = getAdminUsername();
+
+            container.innerHTML = '';
+            let keys = Object.keys(myChats);
+            if (keys.length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:#94a3b8; font-size:12px; margin-top:30px;">Kirim pesan ke Admin!</div>`;
+                return;
+            }
+
+            keys.forEach(key => {
+                let msg = myChats[key];
+                const div = document.createElement('div');
+                div.classList.add('message');
+                let editedTag = msg.edited ? `<span class="edited-label">(diedit)</span>` : '';
+                let contentHTML = formatMessageContent(msg);
+
+                if (msg.sender === window.currentUser.username) {
+                    div.classList.add('outgoing');
+                    div.innerHTML = `<span class="sender-name">Kamu</span>${contentHTML}${editedTag}`;
+                } else {
+                    div.classList.add('incoming');
+                    div.innerHTML = `<span class="sender-name">${msg.sender}<span class="verified-badge">✓</span></span>${contentHTML}${editedTag}`;
+                }
+
+                div.oncontextmenu = (e) => handleMessageInteraction(e, key, window.currentUser.username, msg.sender);
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        window.loadAdminSidebar = function() {
+            const listContainer = document.getElementById('sidebarUserList');
+            let chatUsers = Object.keys(allFirebaseMessages).filter(u => {
+                let isAccountValid = window.accounts[u] && window.accounts[u].role !== 'admin';
+                return isAccountValid;
+            });
+
+            listContainer.innerHTML = '';
+            if (chatUsers.length === 0) {
+                listContainer.innerHTML = `<div style="padding:14px; color:#94a3b8; font-size:12.5px; text-align:center;">Belum ada user yang chat</div>`;
+                return;
+            }
+
+            let bans = JSON.parse(localStorage.getItem('secure_bans')) || {};
+
+            chatUsers.forEach(uname => {
+                const div = document.createElement('div');
+                div.classList.add('user-item');
+                if (window.activeChatUser === uname) div.classList.add('active');
+                
+                let banStatusLabel = "";
+                if (bans[uname]) {
+                    if (bans[uname] === 'permanent') {
+                        banStatusLabel = " 🔴 [Banned]";
+                    } else if (Date.now() < bans[uname]) {
+                        banStatusLabel = " ⏳ [Banned]";
+                    }
+                }
+                
+                div.innerHTML = `
+                    <span class="uname">💬 ${uname} <span style="font-size:9px; color:#dc2626;">${banStatusLabel}</span></span>
+                    <div class="admin-action-btns">
+                        <button class="btn-reset-pw" onclick="openResetModal('${uname}', event)" title="Reset Password">Reset</button>
+                        <button class="btn-ban-user" onclick="openBanModal('${uname}', event)" title="Ban / Blokir User">Ban</button>
+                    </div>
+                `;
+                div.onclick = () => selectChatUser(uname);
+                listContainer.appendChild(div);
+            });
+        }
+
+        window.selectChatUser = function(uname) {
+            window.activeChatUser = uname;
+            localStorage.setItem('secure_active_target', uname);
+            loadAdminSidebar();
+            loadAdminChat(uname);
+            if (window.innerWidth <= 768) {
+                document.getElementById('adminView').classList.add('show-chat');
+            }
+        }
+
+        window.backToSidebar = function() {
+            document.getElementById('profileDropdown').style.display = 'none';
+            document.getElementById('adminView').classList.remove('show-chat');
+        }
+
+        window.loadAdminChat = function(uname) {
+            document.getElementById('activeChatTitle').innerText = `Chat: ${uname}`;
+            document.getElementById('adminInputArea').style.display = 'flex';
+
+            const container = document.getElementById('adminChatMessages');
+            let userChats = allFirebaseMessages[uname] || {};
+            let currentAdmin = window.currentUser.username;
+
+            container.innerHTML = '';
+            let keys = Object.keys(userChats);
+            keys.forEach(key => {
+                let msg = userChats[key];
+                const div = document.createElement('div');
+                div.classList.add('message');
+                let editedTag = msg.edited ? `<span class="edited-label">(diedit)</span>` : '';
+                let contentHTML = formatMessageContent(msg);
+
+                let isAdminSender = window.accounts[msg.sender] && window.accounts[msg.sender].role === 'admin';
+
+                if (msg.sender === currentAdmin) {
+                    div.classList.add('outgoing');
+                    div.innerHTML = `<span class="sender-name">Kamu (Admin)</span>${contentHTML}${editedTag}`;
+                } else if (isAdminSender) {
+                    div.classList.add('outgoing');
+                    div.innerHTML = `<span class="sender-name">${msg.sender} (Admin)</span>${contentHTML}${editedTag}`;
+                } else {
+                    div.classList.add('incoming');
+                    div.innerHTML = `<span class="sender-name">${msg.sender}</span>${contentHTML}${editedTag}`;
+                }
+
+                div.oncontextmenu = (e) => handleMessageInteraction(e, key, uname, msg.sender);
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        window.sendAdminMessage = function() {
+            if (!window.activeChatUser) return;
+            const input = document.getElementById('adminMessageInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const adminName = window.currentUser.username;
+            push(ref(db, `chats/${window.activeChatUser}`), {
+                sender: adminName,
+                text: text,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                edited: false
+            });
+            input.value = '';
+        }
+        window.checkAdminEnter = function(e) { if (e.key === 'Enter') sendAdminMessage(); }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
