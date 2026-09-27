@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Public Chat Bibixse</title>
+    <title>Public Chat by Bibixse</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -12,26 +12,41 @@
         .chat-wrapper { width: 100%; max-width: 420px; height: 85vh; max-height: 680px; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(226, 232, 240, 0.8); position: relative; }
         .chat-header { background: #4f46e5; color: white; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; }
         .chat-header h3 { font-size: 14px; font-weight: 600; }
+        
+        .header-badges { display: flex; gap: 6px; align-items: center; }
         .badge { font-size: 10.5px; background: rgba(255, 255, 255, 0.2); padding: 3px 8px; border-radius: 20px; cursor: pointer; }
         .badge:hover { background: rgba(255, 255, 255, 0.3); }
+        .badge-admin { background: #ef4444; font-weight: 700; }
+        .badge-admin:hover { background: #dc2626; }
 
-        .chat-messages { flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f8fafc; }
-        .message { max-width: 85%; padding: 10px 12px 22px 12px; border-radius: 12px; font-size: 12.5px; line-height: 1.4; word-wrap: break-word; position: relative; user-select: none; }
+        /* Tombol Bulat Pin di Bawah Header */
+        .floating-pin-btn {
+            position: absolute; top: 62px; right: 18px; width: 38px; height: 38px;
+            background: #ffffff; border: 1px solid #e2e8f0; border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 100; font-size: 16px; transition: transform 0.2s;
+        }
+        .floating-pin-btn:hover { transform: scale(1.08); background: #f8fafc; }
+        .pin-badge-count {
+            position: absolute; top: -2px; right: -2px; background: #ef4444; color: white;
+            font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 10px; display: none;
+        }
+
+        .chat-messages { flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f8fafc; margin-top: 10px; }
+        .message { max-width: 85%; padding: 10px 12px 24px 12px; border-radius: 12px; font-size: 12.5px; line-height: 1.4; word-wrap: break-word; position: relative; user-select: none; }
         .message.incoming { background: #ffffff; color: #334155; align-self: flex-start; border-bottom-left-radius: 3px; border: 1px solid #e2e8f0; }
         .message.outgoing { background: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 3px; cursor: pointer; }
+        .message.pinned-highlight { border: 2px solid #8b5cf6 !important; }
         .message .sender-name { font-size: 10px; display: block; margin-bottom: 3px; opacity: 0.85; font-weight: 700; }
         .message .edited-label { font-size: 8.5px; opacity: 0.7; margin-left: 4px; font-style: italic; }
         
-        /* Style Jam ala WhatsApp */
-        .message-time {
-            font-size: 9.5px;
-            position: absolute;
-            bottom: 5px;
-            right: 10px;
-            opacity: 0.75;
+        .message-time-area {
+            font-size: 9.5px; position: absolute; bottom: 5px; right: 10px;
+            display: flex; align-items: center; gap: 3px; opacity: 0.85;
         }
-        .message.incoming .message-time { color: #64748b; }
-        .message.outgoing .message-time { color: rgba(255, 255, 255, 0.85); }
+        .message.incoming .message-time-area { color: #64748b; }
+        .message.outgoing .message-time-area { color: rgba(255, 255, 255, 0.9); }
+        .pin-icon-small { font-size: 10px; display: none; }
 
         .chat-media-img { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 6px; display: block; object-fit: cover; cursor: pointer; }
         .chat-media-video { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 6px; display: block; }
@@ -58,19 +73,28 @@
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 2000; padding: 14px; }
         .modal-content { background: white; padding: 20px; border-radius: 18px; width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 25px 50px rgba(0,0,0,0.25); }
         .modal-content h3 { color: #0f172a; font-size: 16px; font-weight: 700; text-align: center; }
+        
+        .pinned-list-container { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .pinned-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 10px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; }
+        .pinned-item:hover { background: #f1f5f9; }
+        .pinned-item-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .unpin-item-btn { background: none; border: none; color: #ef4444; font-size: 13px; cursor: pointer; padding: 2px 6px; }
+
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group label { font-size: 11px; font-weight: 600; color: #475569; }
         .modal-content input { padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12.5px; outline: none; background: #fff; }
         .btn-submit { background: #4f46e5; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12.5px; width: 100%; text-align: center; }
         .btn-submit:hover { background: #4338ca; }
+        .btn-danger { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12.5px; width: 100%; text-align: center; }
+        .btn-danger:hover { background: #dc2626; }
         .info-box { font-size: 11px; color: #475569; background: #f1f5f9; padding: 8px; border-radius: 8px; border-left: 3px solid #4f46e5; }
 
-        /* Pop-up Menu Action (Edit/Hapus) */
-        .action-popup { display: none; position: absolute; background: white; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; z-index: 1500; overflow: hidden; width: 130px; }
+        .action-popup { display: none; position: absolute; background: white; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; z-index: 1500; overflow: hidden; width: 140px; }
         .action-popup button { width: 100%; padding: 10px 12px; background: none; border: none; text-align: left; font-size: 12px; font-weight: 600; color: #334155; cursor: pointer; }
         .action-popup button:hover { background: #f1f5f9; }
         .action-popup button.delete-btn { color: #dc2626; }
         .action-popup button.delete-btn:hover { background: #fee2e2; }
+        .action-popup button.pin-btn { color: #7c3aed; display: none; } /* Default sembunyi kecuali udah login admin */
 
         @media (max-width: 768px) {
             body { padding: 0; align-items: flex-end; }
@@ -82,9 +106,19 @@
 
     <div class="chat-wrapper" id="chatWrapper">
         <div class="chat-header">
-            <h3>Public Chat 🔴Live</h3>
-            <span class="badge" id="userBadge" onclick="openNameModal()" title="Klik untuk ganti nama">Nama: Tamu</span>
+            <h3>Public Live Chat</h3>
+            <div class="header-badges">
+                <span class="badge" id="userBadge" onclick="openNameModal()" title="Klik untuk ganti nama">Nama: Tamu</span>
+                <span class="badge badge-admin" onclick="openAdminPinModal()" title="Menu Admin">Admin</span>
+            </div>
         </div>
+
+        <!-- Tombol Bulat Melayang Berlogo Pin -->
+        <div class="floating-pin-btn" onclick="openPinnedListModal()" title="Lihat Daftar Pesan Tersemat">
+            📌
+            <span class="pin-badge-count" id="pinCountBadge">0</span>
+        </div>
+
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-area">
             <input type="file" id="fileInput" style="display:none" onchange="handleFileSelected(event)">
@@ -93,10 +127,22 @@
             <button class="btn-send" onclick="sendMessage()">Kirim</button>
         </div>
 
-        <!-- POP-UP EDIT/HAPUS -->
+        <!-- POP-UP MENU AKSI PESAN -->
         <div class="action-popup" id="actionPopup">
-            <button onclick="triggerEdit()">✏️ Edit Pesan</button>
-            <button class="delete-btn" onclick="triggerDelete()">🗑️ Hapus Pesan</button>
+            <button class="pin-btn" id="actionPinBtn" onclick="triggerPin()">📌 Pin Pesan</button>
+            <button id="actionEditBtn" onclick="triggerEdit()">✏️ Edit Pesan</button>
+            <button class="delete-btn" id="actionDeleteBtn" onclick="triggerDelete()">🗑️ Hapus Pesan</button>
+        </div>
+    </div>
+
+    <!-- MODAL DAFTAR PESAN PIN -->
+    <div class="modal" id="pinnedListModal">
+        <div class="modal-content">
+            <h3>📌 Pesan Tersemat</h3>
+            <div class="pinned-list-container" id="pinnedListContainer">
+                <div style="text-align:center; color:#94a3b8; font-size:11px; padding:10px;">Belum ada pesan yang di-pin.</div>
+            </div>
+            <button class="badge" style="background:#e2e8f0; color:#334155; border:none; padding:8px; width:100%; text-align:center;" onclick="document.getElementById('pinnedListModal').style.display='none'">Tutup</button>
         </div>
     </div>
 
@@ -104,12 +150,45 @@
     <div class="modal" id="nameModal">
         <div class="modal-content">
             <h3>Masukkan Nama Kamu</h3>
-            <div class="info-box">Login Menu By Bibixse V1.3</div>
+            <div class="info-box">Logon Menu By Bibixse V1.0</div>
             <div class="form-group">
                 <label>Nama Panggilan</label>
                 <input type="text" id="usernameInput" placeholder="Masukan Username Bebas">
             </div>
             <button class="btn-submit" onclick="saveUsername()">Mulai Chat</button>
+        </div>
+    </div>
+
+    <!-- MODAL PIN ADMIN -->
+    <div class="modal" id="adminPinModal">
+        <div class="modal-content">
+            <h3>Masukkan PIN</h3>
+            <div class="info-box">Masukkan PIN untuk mengubah apapun</div>
+            <div class="form-group">
+                <label>PIN Admin</label>
+                <input type="password" id="adminPinInput" placeholder="Masukkan PIN..." onkeypress="checkAdminPinEnter(event)">
+            </div>
+            <button class="btn-submit" onclick="verifyAdminPin()">Masuk Panel</button>
+            <button class="badge" style="background:#e2e8f0; color:#334155; border:none; padding:8px; margin-top:4px;" onclick="document.getElementById('adminPinModal').style.display='none'">Batal</button>
+        </div>
+    </div>
+
+    <!-- MODAL PANEL KONTROL ADMIN -->
+    <div class="modal" id="adminPanelModal">
+        <div class="modal-content">
+            <h3>⚙️ Panel Kontrol Admin</h3>
+            <div class="info-box">Panel Admin By Bibixse V1.2</div>
+            
+            <div class="form-group" style="margin-top: 6px;">
+                <label>Ubah PIN Admin Baru</label>
+                <input type="password" id="newPinInput" placeholder="PIN baru...">
+            </div>
+            <button class="btn-submit" onclick="saveNewPin()">Simpan PIN Baru</button>
+
+            <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
+
+            <button class="btn-danger" onclick="resetAllChats()">Reset / Hapus Semua Chat</button>
+            <button class="badge" style="background:#4f46e5; color:white; border:none; padding:8px; text-align:center;" onclick="closeAdminPanel()">Tutup Panel Admin</button>
         </div>
     </div>
 
@@ -127,38 +206,19 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, push, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, push, update, remove, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // ==========================================
-        // SCRIPT KEAMANAN (ANTI INSPEK & KLIK KANAN)
-        // ==========================================
-        
-        // 1. Matikan klik kanan bawaan browser secara global (Kecuali khusus untuk chat sendiri diatur di bawah)
         document.addEventListener('contextmenu', function(e) {
-            // Jika yang diklik adalah pesan kita sendiri, biarkan event custom edit/hapus kita jalan
             if (!e.target.closest('.message.outgoing')) {
                 e.preventDefault();
             }
         });
 
-        // 2. Blokir Tombol F12 dan kombinasi kunci pembuka Inspect/Source Code
         document.addEventListener('keydown', function(e) {
-            // F12
-            if (e.key === 'F12') {
-                e.preventDefault();
-                return false;
-            }
-            // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+Shift+C
-            if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C' || e.key === 'i' || e.key === 'j' || e.key === 'c')) {
-                e.preventDefault();
-                return false;
-            }
-            if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
-                e.preventDefault();
-                return false;
-            }
+            if (e.key === 'F12') { e.preventDefault(); return false; }
+            if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C' || e.key === 'i' || e.key === 'j' || e.key === 'c')) { e.preventDefault(); return false; }
+            if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) { e.preventDefault(); return false; }
         });
-        // ==========================================
 
         const firebaseConfig = {
             apiKey: "AIzaSyC5GI7cqUQB8Gu4NoKGDR4zD0xJ4kUowVw",
@@ -181,8 +241,32 @@
         }
 
         let myName = localStorage.getItem('public_chat_username') || '';
+        let isAdminLoggedIn = sessionStorage.getItem('public_chat_is_admin') === 'true';
         let selectedMsgKey = null;
         let selectedMsgText = null;
+        let selectedMsgSender = null;
+        let selectedMsgSenderId = null;
+        let pinnedMessagesData = {};
+
+        onValue(ref(db, 'public_chat/admin_pin'), (snapshot) => {
+            if (!snapshot.exists()) {
+                set(ref(db, 'public_chat/admin_pin'), '1234');
+            }
+        });
+
+        onValue(ref(db, 'public_chat/pinned_messages'), (snapshot) => {
+            pinnedMessagesData = snapshot.val() || {};
+            const countBadge = document.getElementById('pinCountBadge');
+            let keys = Object.keys(pinnedMessagesData);
+
+            if (keys.length > 0) {
+                countBadge.innerText = keys.length;
+                countBadge.style.display = 'block';
+            } else {
+                countBadge.style.display = 'none';
+            }
+            renderPinnedListModal();
+        });
 
         window.initApp = function() {
             if (!myName) {
@@ -207,6 +291,57 @@
             document.getElementById('userBadge').innerText = `Nama: ${myName}`;
         }
 
+        window.openAdminPinModal = function() {
+            if (isAdminLoggedIn) {
+                document.getElementById('adminPanelModal').style.display = 'flex';
+            } else {
+                document.getElementById('adminPinInput').value = '';
+                document.getElementById('adminPinModal').style.display = 'flex';
+            }
+        }
+
+        window.checkAdminPinEnter = function(e) {
+            if (e.key === 'Enter') verifyAdminPin();
+        }
+
+        window.verifyAdminPin = function() {
+            let inputPin = document.getElementById('adminPinInput').value;
+            onValue(ref(db, 'public_chat/admin_pin'), (snapshot) => {
+                let currentPin = snapshot.val() || 'Rahasia';
+                if (inputPin === currentPin) {
+                    isAdminLoggedIn = true;
+                    sessionStorage.setItem('public_chat_is_admin', 'true');
+                    document.getElementById('adminPinModal').style.display = 'none';
+                    document.getElementById('adminPanelModal').style.display = 'flex';
+                } else {
+                    alert('PIN Admin Salah!');
+                }
+            }, { onlyOnce: true });
+        }
+
+        window.closeAdminPanel = function() {
+            document.getElementById('adminPanelModal').style.display = 'none';
+        }
+
+        window.saveNewPin = function() {
+            let newPin = document.getElementById('newPinInput').value.trim();
+            if (!newPin || newPin.length < 3) return alert('PIN baru terlalu pendek!');
+            
+            set(ref(db, 'public_chat/admin_pin'), newPin).then(() => {
+                alert('PIN Admin berhasil diubah!');
+                document.getElementById('newPinInput').value = '';
+            });
+        }
+
+        window.resetAllChats = function() {
+            if (confirm('PERINGATAN: Yakin ingin mereset semua chat publik?')) {
+                remove(ref(db, 'public_chat/messages/'));
+                remove(ref(db, 'public_chat/pinned_messages'));
+                alert('Semua chat berhasil dibersihkan.');
+                document.getElementById('adminPanelModal').style.display = 'none';
+            }
+        }
+
         onValue(ref(db, 'public_chat/messages/'), (snapshot) => {
             const messages = snapshot.val() || {};
             const container = document.getElementById('chatMessages');
@@ -222,9 +357,15 @@
                 let msg = messages[key];
                 const div = document.createElement('div');
                 div.classList.add('message');
+                div.id = `msg-${key}`;
 
                 let isMe = msg.senderId === myId;
                 div.classList.add(isMe ? 'outgoing' : 'incoming');
+
+                let isPinned = pinnedMessagesData[key] !== undefined;
+                if (isPinned) {
+                    div.classList.add('pinned-highlight');
+                }
 
                 let contentHTML = formatMessageContent(msg);
                 if (msg.edited) {
@@ -236,44 +377,67 @@
                 div.innerHTML = `
                     <span class="sender-name">${msg.sender}</span>
                     ${contentHTML}
-                    <span class="message-time">${timeString}</span>
+                    <div class="message-time-area">
+                        <span class="pin-icon-small" id="pin-icon-${key}" style="display: ${isPinned ? 'inline' : 'none'};">📌</span>
+                        <span>${timeString}</span>
+                    </div>
                 `;
 
-                if (isMe && !msg.fileData) {
-                    let pressTimer;
+                let pressTimer;
+                div.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    showActionPopup(e, key, msg.text, msg.sender, msg.senderId);
+                });
 
-                    div.addEventListener('contextmenu', function(e) {
-                        e.preventDefault();
-                        showActionPopup(e, key, msg.text);
-                    });
+                div.addEventListener('touchstart', function(e) {
+                    pressTimer = setTimeout(() => {
+                        let touch = e.touches[0];
+                        showActionPopup(touch, key, msg.text, msg.sender, msg.senderId);
+                    }, 600);
+                });
 
-                    div.addEventListener('touchstart', function(e) {
-                        pressTimer = setTimeout(() => {
-                            let touch = e.touches[0];
-                            showActionPopup(touch, key, msg.text);
-                        }, 600);
-                    });
-
-                    div.addEventListener('touchend', function() {
-                        clearTimeout(pressTimer);
-                    });
-                }
+                div.addEventListener('touchend', function() {
+                    clearTimeout(pressTimer);
+                });
 
                 container.appendChild(div);
             });
             container.scrollTop = container.scrollHeight;
         });
 
-        function showActionPopup(e, key, text) {
+        function showActionPopup(e, key, text, sender, senderId) {
             selectedMsgKey = key;
             selectedMsgText = text;
+            selectedMsgSender = sender;
+            selectedMsgSenderId = senderId;
             const popup = document.getElementById('actionPopup');
             
+            // Atur tombol apa saja yang muncul berdasarkan hak akses
+            const pinBtn = document.getElementById('actionPinBtn');
+            const editBtn = document.getElementById('actionEditBtn');
+            const deleteBtn = document.getElementById('actionDeleteBtn');
+
+            // Tombol Pin hanya muncul jika sudah login admin
+            if (isAdminLoggedIn) {
+                pinBtn.style.display = 'block';
+            } else {
+                pinBtn.style.display = 'none';
+            }
+
+            // Edit & Hapus hanya muncul jika pesan sendiri ATAU sudah login admin
+            if (senderId === myId || isAdminLoggedIn) {
+                editBtn.style.display = senderId === myId ? 'block' : 'none'; // Edit biasanya khusus pengirim asli
+                deleteBtn.style.display = 'block';
+            } else {
+                editBtn.style.display = 'none';
+                deleteBtn.style.display = 'none';
+            }
+
             let x = e.clientX || (e.pageX - window.scrollX);
             let y = e.clientY || (e.pageY - window.scrollY);
 
             popup.style.left = `${Math.min(x, window.innerWidth - 140)}px`;
-            popup.style.top = `${Math.min(y, window.innerHeight - 90)}px`;
+            popup.style.top = `${Math.min(y, window.innerHeight - 120)}px`;
             popup.style.display = 'block';
         }
 
@@ -283,6 +447,63 @@
                 popup.style.display = 'none';
             }
         });
+
+        window.triggerPin = function() {
+            if (!isAdminLoggedIn) return alert('Akses ditolak! Fitur ini khusus Admin.');
+            document.getElementById('actionPopup').style.display = 'none';
+            set(ref(db, `public_chat/pinned_messages/${selectedMsgKey}`), {
+                text: selectedMsgText,
+                sender: selectedMsgSender
+            });
+        }
+
+        window.openPinnedListModal = function() {
+            document.getElementById('pinnedListModal').style.display = 'flex';
+        }
+
+        window.renderPinnedListModal = function() {
+            const container = document.getElementById('pinnedListContainer');
+            container.innerHTML = '';
+
+            let keys = Object.keys(pinnedMessagesData);
+            if (keys.length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:#94a3b8; font-size:11px; padding:10px;">Belum ada pesan yang di-pin.</div>`;
+                return;
+            }
+
+            keys.forEach(key => {
+                let item = pinnedMessagesData[key];
+                const div = document.createElement('div');
+                div.classList.add('pinned-item');
+                
+                // Tombol unpin di list hanya muncul jika admin
+                let unpinBtnHTML = isAdminLoggedIn ? `<button class="unpin-item-btn" onclick="unpinSpecificMessage('${key}')" title="Hapus Pin">✕</button>` : '';
+
+                div.innerHTML = `
+                    <div class="pinned-item-text" onclick="scrollToMessage('${key}')">
+                        <b>${item.sender}:</b> ${item.text}
+                    </div>
+                    ${unpinBtnHTML}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.scrollToMessage = function(key) {
+            document.getElementById('pinnedListModal').style.display = 'none';
+            let targetEl = document.getElementById(`msg-${key}`);
+            if (targetEl) {
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetEl.style.transition = 'background 0.3s';
+                targetEl.style.background = '#fef08a';
+                setTimeout(() => { targetEl.style.background = ''; }, 1200);
+            }
+        }
+
+        window.unpinSpecificMessage = function(key) {
+            if (!isAdminLoggedIn) return alert('Akses ditolak!');
+            remove(ref(db, `public_chat/pinned_messages/${key}`));
+        }
 
         window.triggerEdit = function() {
             document.getElementById('actionPopup').style.display = 'none';
@@ -298,6 +519,11 @@
                 text: newText,
                 edited: true
             });
+            
+            if (pinnedMessagesData[selectedMsgKey]) {
+                update(ref(db, `public_chat/pinned_messages/${selectedMsgKey}`), { text: newText });
+            }
+
             document.getElementById('editModal').style.display = 'none';
         }
 
@@ -305,6 +531,7 @@
             document.getElementById('actionPopup').style.display = 'none';
             if (confirm('Yakin ingin menghapus pesan ini?')) {
                 remove(ref(db, `public_chat/messages/${selectedMsgKey}`));
+                remove(ref(db, `public_chat/pinned_messages/${selectedMsgKey}`));
             }
         }
 
@@ -355,7 +582,7 @@
                 };
                 reader.readAsDataURL(file);
             } else {
-                alert(`File terlalu besar (${(file.size / (1024*1024)).toFixed(1)}MB). Maksimal 3.5MB.`);
+                alert(`File terlalu besar. Maksimal 3.5MB.`);
                 event.target.value = '';
             }
         }
