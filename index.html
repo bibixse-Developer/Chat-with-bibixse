@@ -94,7 +94,7 @@
         .action-popup button:hover { background: #f1f5f9; }
         .action-popup button.delete-btn { color: #dc2626; }
         .action-popup button.delete-btn:hover { background: #fee2e2; }
-        .action-popup button.pin-btn { color: #7c3aed; display: none; } /* Default sembunyi kecuali udah login admin */
+        .action-popup button.pin-btn { color: #7c3aed; display: none; }
 
         @media (max-width: 768px) {
             body { padding: 0; align-items: flex-end; }
@@ -208,8 +208,10 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, push, update, remove, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+        // Mencegah klik kanan umum di dokumen, KECUALI jika sudah login Admin
         document.addEventListener('contextmenu', function(e) {
-            if (!e.target.closest('.message.outgoing')) {
+            let isAdmin = sessionStorage.getItem('public_chat_is_admin') === 'true';
+            if (!isAdmin && !e.target.closest('.message.outgoing')) {
                 e.preventDefault();
             }
         });
@@ -307,7 +309,7 @@
         window.verifyAdminPin = function() {
             let inputPin = document.getElementById('adminPinInput').value;
             onValue(ref(db, 'public_chat/admin_pin'), (snapshot) => {
-                let currentPin = snapshot.val() || 'Rahasia';
+                let currentPin = snapshot.val() || '1234';
                 if (inputPin === currentPin) {
                     isAdminLoggedIn = true;
                     sessionStorage.setItem('public_chat_is_admin', 'true');
@@ -383,17 +385,25 @@
                     </div>
                 `;
 
-                let pressTimer;
+                // Logika klik kanan / interaksi dibatasi ketat berdasarkan status & kepemilikan pesan
                 div.addEventListener('contextmenu', function(e) {
-                    e.preventDefault();
-                    showActionPopup(e, key, msg.text, msg.sender, msg.senderId);
+                    if (isMe || isAdminLoggedIn) {
+                        e.preventDefault();
+                        showActionPopup(e, key, msg.text, msg.sender, msg.senderId);
+                    } else {
+                        // User biasa klik kanan pesan orang lain dibiarkan bawaan browser / diabaikan
+                        e.stopPropagation();
+                    }
                 });
 
+                let pressTimer;
                 div.addEventListener('touchstart', function(e) {
-                    pressTimer = setTimeout(() => {
-                        let touch = e.touches[0];
-                        showActionPopup(touch, key, msg.text, msg.sender, msg.senderId);
-                    }, 600);
+                    if (isMe || isAdminLoggedIn) {
+                        pressTimer = setTimeout(() => {
+                            let touch = e.touches[0];
+                            showActionPopup(touch, key, msg.text, msg.sender, msg.senderId);
+                        }, 600);
+                    }
                 });
 
                 div.addEventListener('touchend', function() {
@@ -412,26 +422,18 @@
             selectedMsgSenderId = senderId;
             const popup = document.getElementById('actionPopup');
             
-            // Atur tombol apa saja yang muncul berdasarkan hak akses
             const pinBtn = document.getElementById('actionPinBtn');
             const editBtn = document.getElementById('actionEditBtn');
             const deleteBtn = document.getElementById('actionDeleteBtn');
 
-            // Tombol Pin hanya muncul jika sudah login admin
-            if (isAdminLoggedIn) {
-                pinBtn.style.display = 'block';
-            } else {
-                pinBtn.style.display = 'none';
-            }
+            // 1. Tombol Pin: Hanya tampil jika Admin login
+            pinBtn.style.display = isAdminLoggedIn ? 'block' : 'none';
 
-            // Edit & Hapus hanya muncul jika pesan sendiri ATAU sudah login admin
-            if (senderId === myId || isAdminLoggedIn) {
-                editBtn.style.display = senderId === myId ? 'block' : 'none'; // Edit biasanya khusus pengirim asli
-                deleteBtn.style.display = 'block';
-            } else {
-                editBtn.style.display = 'none';
-                deleteBtn.style.display = 'none';
-            }
+            // 2. Tombol Edit: Hanya tampil jika itu pesan sendiri DAN bukan admin yang sedang intervensi pesan orang lain
+            editBtn.style.display = (senderId === myId) ? 'block' : 'none';
+
+            // 3. Tombol Hapus: Tampil untuk pesan sendiri ATAU jika berstatus Admin
+            deleteBtn.style.display = (senderId === myId || isAdminLoggedIn) ? 'block' : 'none';
 
             let x = e.clientX || (e.pageX - window.scrollX);
             let y = e.clientY || (e.pageY - window.scrollY);
@@ -476,7 +478,6 @@
                 const div = document.createElement('div');
                 div.classList.add('pinned-item');
                 
-                // Tombol unpin di list hanya muncul jika admin
                 let unpinBtnHTML = isAdminLoggedIn ? `<button class="unpin-item-btn" onclick="unpinSpecificMessage('${key}')" title="Hapus Pin">✕</button>` : '';
 
                 div.innerHTML = `
@@ -529,6 +530,10 @@
 
         window.triggerDelete = function() {
             document.getElementById('actionPopup').style.display = 'none';
+            if (selectedMsgSenderId !== myId && !isAdminLoggedIn) {
+                return alert('Kamu hanya bisa menghapus pesanmu sendiri!');
+            }
+
             if (confirm('Yakin ingin menghapus pesan ini?')) {
                 remove(ref(db, `public_chat/messages/${selectedMsgKey}`));
                 remove(ref(db, `public_chat/pinned_messages/${selectedMsgKey}`));
