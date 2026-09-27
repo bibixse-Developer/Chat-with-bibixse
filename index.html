@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Public Chat Room</title>
+    <title>Public Chat Bibixse</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -104,10 +104,10 @@
     <div class="modal" id="nameModal">
         <div class="modal-content">
             <h3>Masukkan Nama Kamu</h3>
-            <div class="info-box">Login Menu By Bibixse</div>
+            <div class="info-box">Login Menu By Bibixse V1.3</div>
             <div class="form-group">
                 <label>Nama Panggilan</label>
-                <input type="text" id="usernameInput" placeholder="Masukan Username Kamu Bebas">
+                <input type="text" id="usernameInput" placeholder="Masukan Username Bebas">
             </div>
             <button class="btn-submit" onclick="saveUsername()">Mulai Chat</button>
         </div>
@@ -129,6 +129,37 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, push, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+        // ==========================================
+        // SCRIPT KEAMANAN (ANTI INSPEK & KLIK KANAN)
+        // ==========================================
+        
+        // 1. Matikan klik kanan bawaan browser secara global (Kecuali khusus untuk chat sendiri diatur di bawah)
+        document.addEventListener('contextmenu', function(e) {
+            // Jika yang diklik adalah pesan kita sendiri, biarkan event custom edit/hapus kita jalan
+            if (!e.target.closest('.message.outgoing')) {
+                e.preventDefault();
+            }
+        });
+
+        // 2. Blokir Tombol F12 dan kombinasi kunci pembuka Inspect/Source Code
+        document.addEventListener('keydown', function(e) {
+            // F12
+            if (e.key === 'F12') {
+                e.preventDefault();
+                return false;
+            }
+            // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+Shift+C
+            if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C' || e.key === 'i' || e.key === 'j' || e.key === 'c')) {
+                e.preventDefault();
+                return false;
+            }
+            if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        // ==========================================
+
         const firebaseConfig = {
             apiKey: "AIzaSyC5GI7cqUQB8Gu4NoKGDR4zD0xJ4kUowVw",
             authDomain: "website-chat-8ad83.firebaseapp.com",
@@ -143,7 +174,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Buat ID unik permanen untuk perangkat ini jika belum ada
         let myId = localStorage.getItem('public_chat_uid');
         if (!myId) {
             myId = 'user_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -177,7 +207,6 @@
             document.getElementById('userBadge').innerText = `Nama: ${myName}`;
         }
 
-        // Ambil data pesan secara real-time dari satu ruang publik
         onValue(ref(db, 'public_chat/messages/'), (snapshot) => {
             const messages = snapshot.val() || {};
             const container = document.getElementById('chatMessages');
@@ -194,7 +223,6 @@
                 const div = document.createElement('div');
                 div.classList.add('message');
 
-                // Cek kepemilikan berdasarkan ID perangkat, BUKAN nama tampilannya
                 let isMe = msg.senderId === myId;
                 div.classList.add(isMe ? 'outgoing' : 'incoming');
 
@@ -211,17 +239,14 @@
                     <span class="message-time">${timeString}</span>
                 `;
 
-                // Tambahkan event Klik Kanan & Tekan Tahan (Long Press) HANYA untuk pesan milik sendiri
                 if (isMe && !msg.fileData) {
                     let pressTimer;
 
-                    // Klik Kanan (PC)
                     div.addEventListener('contextmenu', function(e) {
                         e.preventDefault();
                         showActionPopup(e, key, msg.text);
                     });
 
-                    // Tekan Tahan / Long Press (HP)
                     div.addEventListener('touchstart', function(e) {
                         pressTimer = setTimeout(() => {
                             let touch = e.touches[0];
@@ -293,7 +318,7 @@
             if (!text) return;
 
             push(ref(db, 'public_chat/messages/'), {
-                senderId: myId, // Simpan ID perangkat agar bisa diedit kapan pun walau nama diganti
+                senderId: myId,
                 sender: myName,
                 text: text,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -371,7 +396,7 @@
             try { fallbackDomain = new URL(url).hostname; } catch(e) { fallbackDomain = "Link"; }
 
             let fileCardHTML = `
-                <a href="${url}" target="_blank" class="file-card" style="margin-top:6px;">
+                <a href="${url}" target="_blank" class="chat-file-card" style="margin-top:6px;">
                     <span>📦</span>
                     <div style="overflow:hidden;">
                         <div style="font-weight:700; font-size:11px;">Buka Link / File</div>
