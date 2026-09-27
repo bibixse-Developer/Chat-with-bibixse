@@ -289,7 +289,7 @@
             authDomain: "website-chat-8ad83.firebaseapp.com",
             databaseURL: "https://website-chat-8ad83-default-rtdb.firebaseio.com",
             projectId: "website-chat-8ad83",
-            storageBucket: "website-chat-8ad83.appspot.com",
+            storageBucket: "website-chat-8ad83.firebasestorage.app",
             messagingSenderId: "558083628282",
             appId: "1:558083628282:web:1738900d71414b554c3d43",
             measurementId: "G-EQ2Z8W0GD6"
@@ -373,7 +373,6 @@
                 localStorage.setItem('secure_accounts', JSON.stringify(window.accounts));
             }
 
-            // PENGAMAN MUTLAK: Akun dengan role admin/owner TIDAK AKAN PERNAH DIANGGAP BANNED
             let isAdminAccount = window.currentUser.role === 'admin' || window.accounts[currentUname]?.role === 'admin';
             let isBanned = isAdminAccount ? false : checkBanStatus();
 
