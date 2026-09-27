@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Public Chat Room</title>
+    <title>Public Chat With Bibixse</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #1e293b; padding: 12px; }
 
-        .chat-wrapper { width: 100%; max-width: 420px; height: 85vh; max-height: 680px; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(226, 232, 240, 0.8); }
+        .chat-wrapper { width: 100%; max-width: 420px; height: 85vh; max-height: 680px; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(226, 232, 240, 0.8); position: relative; }
         .chat-header { background: #4f46e5; color: white; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; }
         .chat-header h3 { font-size: 14px; font-weight: 600; }
         .badge { font-size: 10.5px; background: rgba(255, 255, 255, 0.2); padding: 3px 8px; border-radius: 20px; cursor: pointer; }
         .badge:hover { background: rgba(255, 255, 255, 0.3); }
 
         .chat-messages { flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f8fafc; }
-        .message { max-width: 85%; padding: 10px 12px; border-radius: 12px; font-size: 12.5px; line-height: 1.4; word-wrap: break-word; position: relative; }
+        .message { max-width: 85%; padding: 10px 12px; border-radius: 12px; font-size: 12.5px; line-height: 1.4; word-wrap: break-word; position: relative; user-select: none; }
         .message.incoming { background: #ffffff; color: #334155; align-self: flex-start; border-bottom-left-radius: 3px; border: 1px solid #e2e8f0; }
-        .message.outgoing { background: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
+        .message.outgoing { background: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 3px; cursor: pointer; }
         .message .sender-name { font-size: 10px; display: block; margin-bottom: 3px; opacity: 0.85; font-weight: 700; }
         .message .edited-label { font-size: 8.5px; opacity: 0.7; margin-left: 4px; font-style: italic; }
 
@@ -54,6 +54,13 @@
         .btn-submit:hover { background: #4338ca; }
         .info-box { font-size: 11px; color: #475569; background: #f1f5f9; padding: 8px; border-radius: 8px; border-left: 3px solid #4f46e5; }
 
+        /* Pop-up Menu Action (Edit/Hapus) */
+        .action-popup { display: none; position: absolute; background: white; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; z-index: 1500; overflow: hidden; width: 130px; }
+        .action-popup button { width: 100%; padding: 10px 12px; background: none; border: none; text-align: left; font-size: 12px; font-weight: 600; color: #334155; cursor: pointer; }
+        .action-popup button:hover { background: #f1f5f9; }
+        .action-popup button.delete-btn { color: #dc2626; }
+        .action-popup button.delete-btn:hover { background: #fee2e2; }
+
         @media (max-width: 768px) {
             body { padding: 0; align-items: flex-end; }
             .chat-wrapper { width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; border: none; }
@@ -62,9 +69,9 @@
 </head>
 <body>
 
-    <div class="chat-wrapper">
+    <div class="chat-wrapper" id="chatWrapper">
         <div class="chat-header">
-            <h3>Public Live Chat</h3>
+            <h3>Public Chat 🔴live</h3>
             <span class="badge" id="userBadge" onclick="openNameModal()" title="Klik untuk ganti nama">Nama: Tamu</span>
         </div>
         <div class="chat-messages" id="chatMessages"></div>
@@ -74,24 +81,42 @@
             <input type="text" id="messageInput" placeholder="Ketik pesan..." onkeypress="checkEnter(event)">
             <button class="btn-send" onclick="sendMessage()">Kirim</button>
         </div>
+
+        <!-- POP-UP EDIT/HAPUS -->
+        <div class="action-popup" id="actionPopup">
+            <button onclick="triggerEdit()">✏️ Edit Pesan</button>
+            <button class="delete-btn" onclick="triggerDelete()">🗑️ Hapus Pesan</button>
+        </div>
     </div>
 
     <!-- MODAL SET NAMA -->
     <div class="modal" id="nameModal">
         <div class="modal-content">
             <h3>Masukkan Nama Kamu</h3>
-            <div class="info-box">💡 Nama ini akan muncul di sebelah pesan yang kamu kirim ke ruang publik.</div>
+            <div class="info-box">Masukan Username Untuk Mulai Mengetik</div>
             <div class="form-group">
                 <label>Nama Panggilan</label>
-                <input type="text" id="usernameInput" placeholder="Contoh: Budi, Rian, dll">
+                <input type="text" id="usernameInput" placeholder="Masukan Username Bebas">
             </div>
             <button class="btn-submit" onclick="saveUsername()">Mulai Chat</button>
         </div>
     </div>
 
+    <!-- MODAL EDIT PESAN -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <h3>Edit Pesan</h3>
+            <div class="form-group">
+                <label>Pesan Baru</label>
+                <input type="text" id="editMessageInput" placeholder="Ubah isi pesan...">
+            </div>
+            <button class="btn-submit" onclick="saveEditedMessage()">Simpan Perubahan</button>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, push, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC5GI7cqUQB8Gu4NoKGDR4zD0xJ4kUowVw",
@@ -108,6 +133,8 @@
         const db = getDatabase(app);
 
         let myName = localStorage.getItem('public_chat_username') || '';
+        let selectedMsgKey = null;
+        let selectedMsgText = null;
 
         window.initApp = function() {
             if (!myName) {
@@ -153,11 +180,85 @@
                 div.classList.add(isMe ? 'outgoing' : 'incoming');
 
                 let contentHTML = formatMessageContent(msg);
+                if (msg.edited) {
+                    contentHTML += `<span class="edited-label">(diedit)</span>`;
+                }
+
                 div.innerHTML = `<span class="sender-name">${msg.sender}</span>${contentHTML}`;
+
+                // Tambahkan event Klik Kanan & Tekan Tahan (Long Press) HANYA untuk pesan milik sendiri
+                if (isMe && !msg.fileData) {
+                    let pressTimer;
+
+                    // Klik Kanan (PC)
+                    div.addEventListener('contextmenu', function(e) {
+                        e.preventDefault();
+                        showActionPopup(e, key, msg.text);
+                    });
+
+                    // Tekan Tahan / Long Press (HP)
+                    div.addEventListener('touchstart', function(e) {
+                        pressTimer = setTimeout(() => {
+                            let touch = e.touches[0];
+                            showActionPopup(touch, key, msg.text);
+                        }, 600); // Tahan selama 0.6 detik
+                    });
+
+                    div.addEventListener('touchend', function() {
+                        clearTimeout(pressTimer);
+                    });
+                }
+
                 container.appendChild(div);
             });
             container.scrollTop = container.scrollHeight;
         });
+
+        function showActionPopup(e, key, text) {
+            selectedMsgKey = key;
+            selectedMsgText = text;
+            const popup = document.getElementById('actionPopup');
+            
+            // Posisikan pop-up mendekati sentuhan/klik
+            let x = e.clientX || (e.pageX - window.scrollX);
+            let y = e.clientY || (e.pageY - window.scrollY);
+
+            popup.style.left = `${Math.min(x, window.innerWidth - 140)}px`;
+            popup.style.top = `${Math.min(y, window.innerHeight - 90)}px`;
+            popup.style.display = 'block';
+        }
+
+        // Tutup pop-up jika area luar diklik
+        window.addEventListener('click', function(e) {
+            const popup = document.getElementById('actionPopup');
+            if (!e.target.closest('.message') && !e.target.closest('.action-popup')) {
+                popup.style.display = 'none';
+            }
+        });
+
+        window.triggerEdit = function() {
+            document.getElementById('actionPopup').style.display = 'none';
+            document.getElementById('editMessageInput').value = selectedMsgText;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        window.saveEditedMessage = function() {
+            let newText = document.getElementById('editMessageInput').value.trim();
+            if (!newText) return alert('Pesan tidak boleh kosong!');
+
+            update(ref(db, `public_chat/messages/${selectedMsgKey}`), {
+                text: newText,
+                edited: true
+            });
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        window.triggerDelete = function() {
+            document.getElementById('actionPopup').style.display = 'none';
+            if (confirm('Yakin ingin menghapus pesan ini?')) {
+                remove(ref(db, `public_chat/messages/${selectedMsgKey}`));
+            }
+        }
 
         window.sendMessage = function() {
             if (!myName) {
