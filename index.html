@@ -19,7 +19,6 @@
         .badge-admin { background: #ef4444; font-weight: 700; }
         .badge-admin:hover { background: #dc2626; }
 
-        /* Tombol Bulat Pin di Bawah Header */
         .floating-pin-btn {
             position: absolute; top: 62px; right: 18px; width: 38px; height: 38px;
             background: #ffffff; border: 1px solid #e2e8f0; border-radius: 50%;
@@ -63,10 +62,7 @@
         .chat-input-area input[type="text"] { flex: 1; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 10px; outline: none; font-size: 12.5px; }
         .chat-input-area input[type="text"]:focus { border-color: #4f46e5; }
 
-        .btn-attach {
-            background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; width: 36px; height: 36px;
-            border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;
-        }
+        .btn-attach { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; }
         .btn-attach:hover { background: #e2e8f0; color: #0f172a; }
         .chat-input-area button.btn-send { background: #4f46e5; color: white; border: none; padding: 0 14px; height: 36px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 12.5px; }
 
@@ -87,6 +83,8 @@
         .btn-submit:hover { background: #4338ca; }
         .btn-danger { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12.5px; width: 100%; text-align: center; }
         .btn-danger:hover { background: #dc2626; }
+        .btn-warning { background: #f59e0b; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12.5px; width: 100%; text-align: center; }
+        .btn-warning:hover { background: #d97706; }
         .info-box { font-size: 11px; color: #475569; background: #f1f5f9; padding: 8px; border-radius: 8px; border-left: 3px solid #4f46e5; }
 
         .action-popup { display: none; position: absolute; background: white; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; z-index: 1500; overflow: hidden; width: 140px; }
@@ -94,7 +92,7 @@
         .action-popup button:hover { background: #f1f5f9; }
         .action-popup button.delete-btn { color: #dc2626; }
         .action-popup button.delete-btn:hover { background: #fee2e2; }
-        .action-popup button.pin-btn { color: #7c3aed; display: none; } /* Default sembunyi kecuali udah login admin */
+        .action-popup button.pin-btn { color: #7c3aed; display: none; }
 
         @media (max-width: 768px) {
             body { padding: 0; align-items: flex-end; }
@@ -113,7 +111,6 @@
             </div>
         </div>
 
-        <!-- Tombol Bulat Melayang Berlogo Pin -->
         <div class="floating-pin-btn" onclick="openPinnedListModal()" title="Lihat Daftar Pesan Tersemat">
             📌
             <span class="pin-badge-count" id="pinCountBadge">0</span>
@@ -127,7 +124,6 @@
             <button class="btn-send" onclick="sendMessage()">Kirim</button>
         </div>
 
-        <!-- POP-UP MENU AKSI PESAN -->
         <div class="action-popup" id="actionPopup">
             <button class="pin-btn" id="actionPinBtn" onclick="triggerPin()">📌 Pin Pesan</button>
             <button id="actionEditBtn" onclick="triggerEdit()">✏️ Edit Pesan</button>
@@ -186,8 +182,10 @@
             <button class="btn-submit" onclick="saveNewPin()">Simpan PIN Baru</button>
 
             <hr style="border:0; border-top:1px solid #e2e8f0; margin:4px 0;">
-
-            <button class="btn-danger" onclick="resetAllChats()">Reset / Hapus Semua Chat</button>
+            
+            <!-- Tombol Logout Admin ditambahkan di sini -->
+            <button class="btn-warning" onclick="logoutAdmin()">🚪 Logout dari Admin</button>
+            <button class="btn-danger" onclick="resetAllChats()">🗑️ Reset Semua Chat</button>
             <button class="badge" style="background:#4f46e5; color:white; border:none; padding:8px; text-align:center;" onclick="closeAdminPanel()">Tutup Panel Admin</button>
         </div>
     </div>
@@ -209,7 +207,8 @@
         import { getDatabase, ref, push, update, remove, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         document.addEventListener('contextmenu', function(e) {
-            if (!e.target.closest('.message.outgoing')) {
+            let isAdmin = sessionStorage.getItem('public_chat_is_admin') === 'true';
+            if (!isAdmin && !e.target.closest('.message.outgoing')) {
                 e.preventDefault();
             }
         });
@@ -227,8 +226,7 @@
             projectId: "website-chat-8ad83",
             storageBucket: "website-chat-8ad83.appspot.com",
             messagingSenderId: "558083628282",
-            appId: "1:558083628282:web:1738900d71414b554c3d43",
-            measurementId: "G-EQ2Z8W0GD6"
+            appId: "1:558083628282:web:1738900d71414b554c3d43"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -307,7 +305,7 @@
         window.verifyAdminPin = function() {
             let inputPin = document.getElementById('adminPinInput').value;
             onValue(ref(db, 'public_chat/admin_pin'), (snapshot) => {
-                let currentPin = snapshot.val() || 'Rahasia';
+                let currentPin = snapshot.val() || '1234';
                 if (inputPin === currentPin) {
                     isAdminLoggedIn = true;
                     sessionStorage.setItem('public_chat_is_admin', 'true');
@@ -321,6 +319,15 @@
 
         window.closeAdminPanel = function() {
             document.getElementById('adminPanelModal').style.display = 'none';
+        }
+
+        // --- FUNGSI LOGOUT ADMIN BARU ---
+        window.logoutAdmin = function() {
+            sessionStorage.removeItem('public_chat_is_admin');
+            isAdminLoggedIn = false;
+            alert('Berhasil keluar dari mode Admin!');
+            document.getElementById('adminPanelModal').style.display = 'none';
+            document.getElementById('actionPopup').style.display = 'none'; // Sembunyikan popup jika sedang terbuka
         }
 
         window.saveNewPin = function() {
@@ -383,17 +390,23 @@
                     </div>
                 `;
 
-                let pressTimer;
                 div.addEventListener('contextmenu', function(e) {
-                    e.preventDefault();
-                    showActionPopup(e, key, msg.text, msg.sender, msg.senderId);
+                    if (isMe || isAdminLoggedIn) {
+                        e.preventDefault();
+                        showActionPopup(e, key, msg.text, msg.sender, msg.senderId);
+                    } else {
+                        e.stopPropagation();
+                    }
                 });
 
+                let pressTimer;
                 div.addEventListener('touchstart', function(e) {
-                    pressTimer = setTimeout(() => {
-                        let touch = e.touches[0];
-                        showActionPopup(touch, key, msg.text, msg.sender, msg.senderId);
-                    }, 600);
+                    if (isMe || isAdminLoggedIn) {
+                        pressTimer = setTimeout(() => {
+                            let touch = e.touches[0];
+                            showActionPopup(touch, key, msg.text, msg.sender, msg.senderId);
+                        }, 600);
+                    }
                 });
 
                 div.addEventListener('touchend', function() {
@@ -412,26 +425,13 @@
             selectedMsgSenderId = senderId;
             const popup = document.getElementById('actionPopup');
             
-            // Atur tombol apa saja yang muncul berdasarkan hak akses
             const pinBtn = document.getElementById('actionPinBtn');
             const editBtn = document.getElementById('actionEditBtn');
             const deleteBtn = document.getElementById('actionDeleteBtn');
 
-            // Tombol Pin hanya muncul jika sudah login admin
-            if (isAdminLoggedIn) {
-                pinBtn.style.display = 'block';
-            } else {
-                pinBtn.style.display = 'none';
-            }
-
-            // Edit & Hapus hanya muncul jika pesan sendiri ATAU sudah login admin
-            if (senderId === myId || isAdminLoggedIn) {
-                editBtn.style.display = senderId === myId ? 'block' : 'none'; // Edit biasanya khusus pengirim asli
-                deleteBtn.style.display = 'block';
-            } else {
-                editBtn.style.display = 'none';
-                deleteBtn.style.display = 'none';
-            }
+            pinBtn.style.display = isAdminLoggedIn ? 'block' : 'none';
+            editBtn.style.display = (senderId === myId) ? 'block' : 'none';
+            deleteBtn.style.display = (senderId === myId || isAdminLoggedIn) ? 'block' : 'none';
 
             let x = e.clientX || (e.pageX - window.scrollX);
             let y = e.clientY || (e.pageY - window.scrollY);
@@ -476,7 +476,6 @@
                 const div = document.createElement('div');
                 div.classList.add('pinned-item');
                 
-                // Tombol unpin di list hanya muncul jika admin
                 let unpinBtnHTML = isAdminLoggedIn ? `<button class="unpin-item-btn" onclick="unpinSpecificMessage('${key}')" title="Hapus Pin">✕</button>` : '';
 
                 div.innerHTML = `
@@ -529,6 +528,10 @@
 
         window.triggerDelete = function() {
             document.getElementById('actionPopup').style.display = 'none';
+            if (selectedMsgSenderId !== myId && !isAdminLoggedIn) {
+                return alert('Kamu hanya bisa menghapus pesanmu sendiri!');
+            }
+
             if (confirm('Yakin ingin menghapus pesan ini?')) {
                 remove(ref(db, `public_chat/messages/${selectedMsgKey}`));
                 remove(ref(db, `public_chat/pinned_messages/${selectedMsgKey}`));
